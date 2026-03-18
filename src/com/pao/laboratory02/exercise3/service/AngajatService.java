@@ -15,19 +15,35 @@ public class AngajatService {
     public AngajatService() {
         this.angajati = new ArrayList<>();
     }
-
     /** TODO: angajati.add(a); println("Angajat adăugat: " + a.getName()); */
     public void addAngajat(Angajat a) {
         // TODO
+        angajati.add(a);
+        System.out.println("Angajat adăugat: " + a.getName());
     }
 
     /** TODO: dacă goală → mesaj; altfel parcurge cu index și afișează (i+1) + ". " + angajat */
     public void listAll() {
         // TODO
+        if(angajati.size() == 0){
+            System.out.println("Lista goala");
+        }
+        for(int i = 0; i < angajati.size(); ++i){
+            System.out.println((i+1) + ". " + angajati.get(i).getName());
+        }
     }
 
     /** TODO: parcurge lista, sumează a.salariuTotal(), returnează totalul. */
     public double totalSalarii() {
-        return 0; // TODO
+        double suma = 0;
+        if(angajati.size() == 0){
+            System.out.println("Lista goala");
+            return 0;
+        }
+        for(int i = 0; i < angajati.size(); ++i){
+            Angajat a = angajati.get(i);
+            suma = suma + a.salariuTotal();
+        }
+        return suma;
     }
 }

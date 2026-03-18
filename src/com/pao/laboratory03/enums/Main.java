@@ -49,8 +49,28 @@ package com.pao.laboratory03.enums;
  */
 public class Main {
     public static void main(String[] args) {
-        // TODO: implementează pașii de mai sus
-        // Hint: creează mai întâi fișierul Priority.java în acest pachet
+        for (Priority p : Priority.values()) {
+            System.out.println(p.getEmoji() + " " + p.name() +
+                    " (level=" + p.getLevel() + ", color=" + p.getColor() + ")");
+        }
+
+        Priority priority = Priority.HIGH;
+
+        switch (priority) {
+            case HIGH:
+                System.out.println("Atentie! Prioritate ridicata!");
+                break;
+        }
+
+        Priority c = Priority.valueOf("HIGH");
+        System.out.println("Priority.valueOf(\"HIGH\") = " + c);
+
+        System.out.println("HIGH == HIGH? " + (Priority.HIGH == Priority.HIGH));
+        System.out.println("HIGH == LOW? " + (Priority.HIGH == Priority.LOW));
+
+        for (Priority p : Priority.values()) {
+            System.out.println(p + ": name=" + p.name() + ", ordinal=" + p.ordinal());
+        }
     }
 }
 
