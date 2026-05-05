@@ -6,7 +6,7 @@ import java.util.*;
 
 public class Main {
     private static final String FILE_PATH = "src/com/pao/laboratory08/tests/studenti.txt";
-    private static final String OUTPUT_FILE = "src/com/pao/laboratory08/exercise2/rezultate.txt";
+    private static final String OUTPUT_FILE = "src/com/pao/laboratory08/exercise2/rezultate3.txt";
 
     public static void main(String[] args) throws Exception {
 
