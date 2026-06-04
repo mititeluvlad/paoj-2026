@@ -1,144 +1,197 @@
 package com.pao.proiect.PlatformaLicitatii.service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import com.pao.proiect.PlatformaLicitatii.model.CategorieProdus;
-import com.pao.proiect.PlatformaLicitatii.model.Client;
-import com.pao.proiect.PlatformaLicitatii.model.Licitatie;
-import com.pao.proiect.PlatformaLicitatii.model.Oferta;
-import com.pao.proiect.PlatformaLicitatii.model.Produs;
-import com.pao.proiect.PlatformaLicitatii.model.Tranzactie;
+import com.pao.proiect.PlatformaLicitatii.model.*;
+import com.pao.proiect.PlatformaLicitatii.repository.LicitatieRepository;
 
+public class LicitatieService {
 
-public class LicitatieService{
     private Map<Integer, Licitatie> licitatii;
     private List<Tranzactie> tranzactii;
+
     private int nextId = 1;
     private int nextProdusId = 1;
+
     private UtilizatorService utilizatorService = UtilizatorService.getInstance();
 
-    private LicitatieService(){
+    private LicitatieRepository repository = new LicitatieRepository();
+
+    private LicitatieService() {
         licitatii = new HashMap<>();
         tranzactii = new ArrayList<>();
     }
 
-    private static class Holder{
+    private static class Holder {
         private static final LicitatieService INSTANCE = new LicitatieService();
     }
 
-    public static LicitatieService getInstance(){
+    public static LicitatieService getInstance() {
         return Holder.INSTANCE;
     }
 
-    public void adauga(Licitatie l){
+    public void adauga(Licitatie l) {
+
+        AuditService.getInstance().logActiune("adauga_licitatie");
+
         if (l == null || l.getProdus() == null) {
             throw new IllegalArgumentException("Licitatie sau produs null!");
         }
 
-        if (l.getProdus().getPretStart() <= 0) {
-            throw new IllegalArgumentException("Pret invalid!");
-        }
         l.setId(nextId++);
         licitatii.put(l.getId(), l);
+
+        repository.save(l);
     }
 
-    public void sterge(int id){
-        licitatii.remove(id);
-    }
+    public Licitatie getById(int id) {
 
-    public Licitatie getById(int id){
         Licitatie l = licitatii.get(id);
-        if (l == null) {
+
+        if (l == null)
             throw new IllegalArgumentException("Licitatie inexistenta!");
-        }
-        return licitatii.get(id);
-    }
 
-    public Produs creeazaProdus(String nume, double pret, CategorieProdus categorie) {
-        return new Produs(nextProdusId++, nume, pret, categorie);
-    }
-
-    public List<Licitatie> getByNumeProdus(String nume){
-        List<Licitatie> rez = new ArrayList<>();
-
-        for(Licitatie l : licitatii.values()){
-            if(l.getProdus().getNume().equals(nume)){
-                rez.add(l);
-            }
-        }
-        return rez;
+        return l;
     }
 
     public List<Licitatie> getAll() {
         return new ArrayList<>(licitatii.values());
     }
 
-    public void aprobaOferta(int licitatieId, int ofertaId){
-        Licitatie l = getById(licitatieId);
-        l.aprobareOferta(ofertaId);
+    public Produs creeazaProdus(String nume,
+                                double pret,
+                                CategorieProdus categorie) {
+
+        return new Produs(nextProdusId++, nume, pret, categorie);
     }
 
-    public void respingeOferta(int licitatieId, int ofertaId){
-    Licitatie l = getById(licitatieId);
-    l.respingeOferta(ofertaId);
-}
+    public List<Licitatie> getByNumeProdus(String nume) {
 
-    public void inchideLicitatie(int id){
+        List<Licitatie> rez = new ArrayList<>();
+
+        for (Licitatie l : licitatii.values()) {
+            if (l.getProdus().getNume().equals(nume)) {
+                rez.add(l);
+            }
+        }
+
+        return rez;
+    }
+
+    public void aprobaOferta(int licitatieId, int ofertaId) {
+
+        AuditService.getInstance().logActiune("aprobare_oferta");
+
+        Licitatie l = getById(licitatieId);
+
+        l.aprobareOferta(ofertaId);
+
+        repository.updateOfertaStatus(ofertaId, "ACCEPTATA");
+    }
+
+    public void respingeOferta(int licitatieId, int ofertaId) {
+
+        AuditService.getInstance().logActiune("respingere_oferta");
+
+        Licitatie l = getById(licitatieId);
+
+        l.respingeOferta(ofertaId);
+
+        repository.updateOfertaStatus(ofertaId, "RESPINSA");
+    }
+
+    public void inchideLicitatie(int id) {
+
+        AuditService.getInstance().logActiune("inchidere_licitatie");
+
         Licitatie l = getById(id);
+
         l.inchideLicitatie();
 
         try {
-            Oferta castigatoare = l.getOfertaCastigatoare();
-            Tranzactie t = new Tranzactie(tranzactii.size() + 1, l, castigatoare);
-            tranzactii.add(t);
-            //scadem sold ul clientului
-            Client c = (Client) utilizatorService.getById(castigatoare.getClient().getId());
-            c.setBuget(c.getBuget() - castigatoare.getSuma());
 
-            l.inchideLicitatie();
-        } 
-        catch (Exception e) {
-            System.out.println("Nu s-a putut tranzactiona: " + e.getMessage());
+            Oferta cast = l.getOfertaCastigatoare();
+
+            if (cast != null) {
+                repository.finalizeazaLicitatie(
+                        l.getId(),
+                        cast.getClient().getId(),
+                        cast.getId(),
+                        cast.getSuma()
+                );
+
+                Tranzactie t =
+                        new Tranzactie(tranzactii.size() + 1, l, cast);
+
+                tranzactii.add(t);
+            }
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "Eroare inchidere licitatie: " + e.getMessage()
+            );
         }
     }
 
-    public void afiseazaTranzactii(){
-        for(Tranzactie t : tranzactii){
-            System.out.println(t);
-        }
-    }
+    public void afiseazaTranzactiiSortate() {
 
-    public void afiseazaOferteSortate(int licitatieId){
-        Licitatie l = getById(licitatieId);
+        AuditService.getInstance().logActiune("afiseaza_tranzactii_sortate");
+        List<Tranzactie> lista =
+                new ArrayList<>(tranzactii);
 
-        List<Oferta> lista = new ArrayList<>(l.getOferteAprobate());
-        Collections.sort(lista);
-
-        for(Oferta o : lista){
-            System.out.println(o);
-        }
-    }
-
-    public void afiseazaTranzactiiSortate(){
-        List<Tranzactie> lista = new ArrayList<>(tranzactii);
         lista.sort(Comparator.comparing(Tranzactie::getData));
 
-        for(Tranzactie t : lista){
+        for (Tranzactie t : lista) {
             System.out.println(t);
         }
     }
 
     public List<Licitatie> getLicitatiiSortateDupaPret() {
-        List<Licitatie> lista = new ArrayList<>(licitatii.values());
-        
-        lista.sort(Comparator.comparing(l -> l.getProdus().getPretStart()));
+
+        AuditService.getInstance().logActiune("afiseaza_licitatii_sortate");
+
+        List<Licitatie> lista =
+                new ArrayList<>(licitatii.values());
+
+        lista.sort(
+                Comparator.comparing(
+                        l -> l.getProdus().getPretStart()
+                )
+        );
 
         return lista;
     }
-    
+
+    public void afiseazaOferteSortate(int licitatieId) {
+
+        AuditService.getInstance().logActiune("afiseaza_oferte_sortate");
+
+        Licitatie l = getById(licitatieId);
+
+        List<Oferta> lista =
+                new ArrayList<>(l.getOferteAprobate());
+
+        if (lista.isEmpty()) {
+            System.out.println("Nu exista oferte aprobate.");
+            return;
+        }
+
+        lista.sort(Comparator.comparing(Oferta::getSuma));
+
+        for (Oferta o : lista) {
+
+            System.out.println(
+                    o.getId() + " | " +
+                    o.getClient().getUsername() + " | " +
+                    o.getSuma() + " | " +
+                    o.getStatus()
+            );
+        }
+    }
+
+    public void raportLicitatiiCuNumarOferte() {
+        AuditService.getInstance().logActiune("raport_licitatii_cu_numar_oferte");
+        repository.raportLicitatiiCuNumarOferte();
+    }
 }

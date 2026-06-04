@@ -1,3 +1,10 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.referencedLibraries": [
+        "lib\\sqlite-jdbc-3.53.1.0.jar",
+        "c:\\Users\\mitit\\Desktop\\paoj-2026\\lib\\java-diff-utils-4.15.jar"
+    ]
 }
